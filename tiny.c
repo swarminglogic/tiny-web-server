@@ -160,43 +160,6 @@ void format_size(char* buf, struct stat *stat){
     }
 }
 
-void handle_directory_request(int out_fd, int dir_fd, char *filename){
-    char buf[MAXLINE], m_time[32], size[16];
-    struct stat statbuf;
-    sprintf(buf, "HTTP/1.1 200 OK\r\n%s%s%s%s%s",
-            "Content-Type: text/html\r\n\r\n",
-            "<html><head><style>",
-            "body{font-family: monospace; font-size: 13px;}",
-            "td {padding: 1.5px 6px;}",
-            "</style></head><body><table>\n");
-    writen(out_fd, buf, strlen(buf));
-    DIR *d = fdopendir(dir_fd);
-    struct dirent *dp;
-    int ffd;
-    while ((dp = readdir(d)) != NULL){
-        if(!strcmp(dp->d_name, ".") || !strcmp(dp->d_name, "..")){
-            continue;
-        }
-        if ((ffd = openat(dir_fd, dp->d_name, O_RDONLY)) == -1){
-            perror(dp->d_name);
-            continue;
-        }
-        fstat(ffd, &statbuf);
-        strftime(m_time, sizeof(m_time),
-                 "%Y-%m-%d %H:%M", localtime(&statbuf.st_mtime));
-        format_size(size, &statbuf);
-        if(S_ISREG(statbuf.st_mode) || S_ISDIR(statbuf.st_mode)){
-            char *d = S_ISDIR(statbuf.st_mode) ? "/" : "";
-            sprintf(buf, "<tr><td><a href=\"%s%s\">%s%s</a></td><td>%s</td><td>%s</td></tr>\n",
-                    dp->d_name, d, dp->d_name, d, m_time, size);
-            writen(out_fd, buf, strlen(buf));
-        }
-        close(ffd);
-    }
-    sprintf(buf, "</table></body></html>");
-    writen(out_fd, buf, strlen(buf));
-    closedir(d);
-}
 
 static const char* get_mime_type(char *filename){
     char *dot = strrchr(filename, '.');
@@ -285,7 +248,7 @@ void parse_request(int fd, http_request *req){
         filename = uri + 1;
         int length = strlen(filename);
         if (length == 0){
-            filename = ".";
+            filename = "index.html";
         } else {
             for (int i = 0; i < length; ++ i) {
                 if (filename[i] == '?') {
@@ -364,9 +327,6 @@ void process(int fd, struct sockaddr_in *clientaddr){
                 status = 206;
             }
             serve_static(fd, ffd, &req, sbuf.st_size);
-        } else if(S_ISDIR(sbuf.st_mode)){
-            status = 200;
-            handle_directory_request(fd, ffd, req.filename);
         } else {
             status = 400;
             char *msg = "Unknow Error";
@@ -390,18 +350,10 @@ int main(int argc, char** argv){
             default_port = atoi(argv[1]);
         } else {
             path = argv[1];
-            if(chdir(argv[1]) != 0) {
-                perror(argv[1]);
-                exit(1);
-            }
         }
     } else if (argc == 3) {
         default_port = atoi(argv[2]);
         path = argv[1];
-        if(chdir(argv[1]) != 0) {
-            perror(argv[1]);
-            exit(1);
-        }
     }
 
     listenfd = open_listenfd(default_port);

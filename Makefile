@@ -1,5 +1,5 @@
 CC = c99
-CFLAGS = -Wall -O2
+CFLAGS = -Wall -O2 -m32 --static
 
 # LIB = -lpthread
 
