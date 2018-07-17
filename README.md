@@ -5,6 +5,8 @@ Forked from [shenfeng/tiny-web-server](https://github.com/shenfeng/tiny-web-serv
 
 Made significantly dumber, by removing directory listing, and defaulting to hosting `index.html`.
 
+Other relative URLs will still work, and be hosted as expected.
+
 Features
 --------
 
@@ -23,9 +25,9 @@ Non-features
 Usage
 -----
 
-`tiny <port>`, opens a server in the current directory attempting to host `index.html`, port
-default to 9999, just like `python -m SimpleHTTPServer`
+`tiny [port]`, opens a server in the current directory attempting to host `index.html`
 
+`tiny <path> [port]` opens a server in relative `<path>` directory, attempting to host `index.html`
 
 License
 -------
